@@ -27,11 +27,11 @@ Target board: HPM5300EVK RevD with HPM5361ICB1.
 | Right motor PWM | PA27 / PWM0.P3 | J7-12 |
 | Left motor IN1 | PA12 / GPIOA12 | P1-11 |
 | Left motor IN2 | PA30 / GPIOA30 | P1-15 |
-| Right motor IN1 | PB10 / GPIOB10 | P1-36 |
+| Right motor IN1 | PB10 / GPIOB10 | P1-38 |
 | Right motor IN2 | PB11 / GPIOB11 | P1-40 |
 | Motor standby | PA25 / GPIOA25 | P1-26 |
-| Left encoder A | PA20 / QEI0.A | J7-1 |
-| Left encoder B | PA21 / QEI0.B | J7-3 |
+| Left encoder A | PB12 / QEI0.A | P1-37 |
+| Left encoder B | PB13 / QEI0.B | P1-35 |
 | Right encoder A | PB04 / QEI1.A | P1-31 |
 | Right encoder B | PB05 / QEI1.B | P1-32 |
 | USB Host | USB0 | J1 USB_OTG |
@@ -39,14 +39,14 @@ Target board: HPM5300EVK RevD with HPM5361ICB1.
 
 On the HPM5300EVK, encoder connector J7 shares its A and B nets with P1-12 and
 P1-16. Do not use those P1 pins for motor direction outputs. The right motor
-uses `right-invert` in Devicetree because its installed polarity is opposite
-to the left motor.
+uses no direction inversion after the final motor rewiring.
 
 TB6612 VM must come from an external motor supply with a common ground. Do not
 connect motor power to an EVK header. The EVK header only carries the 3.3 V
 logic signals listed above.
 
-The default vehicle parameters follow the MiracZ7 configuration:
+The mechanical defaults follow MiracZ7. Remote-control limits are tuned for
+the installed chassis:
 
 | Parameter | Default |
 |---|---|
@@ -54,8 +54,8 @@ The default vehicle parameters follow the MiracZ7 configuration:
 | Differential track width | 150 mm |
 | Wheelbase | 300 mm, reserved for future chassis models |
 | Encoder counts per wheel revolution | 56000 |
-| Maximum linear speed | 1000 mm/s |
-| Maximum yaw rate | 3142 mrad/s |
+| Maximum linear speed | 500 mm/s |
+| Maximum yaw rate | 6667 mrad/s |
 
 ## Build
 
@@ -113,10 +113,10 @@ failure on hardware.
 On 2026-10-30, MiracZV enumerated the wireless USB HID receiver, fetched and
 parsed its 123-byte report descriptor, and received continuous 9-byte reports.
 An earlier X/Y build confirmed decoded axis values changing with gamepad input.
-The right-stick firmware then identified four axes and selected `Z/RZ` as the
-preferred right-stick pair, with neutral values of 128:128. A complete
-forward/reverse/left/right stick sweep remains a separate operator test; motor
-and encoder closed-loop behavior also remain separate hardware tests.
+The right-stick firmware identified four axes and selected `Z/RZ` as the
+preferred right-stick pair, with neutral values of 128:128. Forward, reverse,
+left and right commands were then validated with both wheel encoders and the
+closed-loop motor controller active.
 
 ## Control architecture
 
@@ -137,10 +137,11 @@ generic encoder API (QEIV2 backend)
 ```
 
 The encoder API reports position and both mechanical speed units. The QEIV2
-backend uses a 20 ms duration window, reads the actual QEI clock rate, and uses
-the devicetree `counts-per-revolution` value. A complete window with no edges is
-reported as a valid zero speed so the closed loop can start from standstill.
-Invalid windows reset the corresponding PID and command that wheel to coast.
+backend derives a fixed 20 ms count-delta measurement from the hardware phase
+counter and uses the devicetree `counts-per-revolution` value. This provides a
+valid zero-speed sample at standstill so the closed loop can start; a completed
+hardware duration or pulse snapshot is preferred when available. Invalid
+windows reset the corresponding PID and command that wheel to coast.
 
 The controller abstraction can later accept DDS, MSP, a planner or an
 autonomous path without changing the chassis loop. Another source only needs to
@@ -164,13 +165,14 @@ provide vehicle-coordinate `linear_mps` and `angular_radps`.
   actual vehicle.
 - HID input currently uses the right stick. Trigger, hat and button mappings are
   not implemented yet.
-- HID enumeration, descriptor parsing, right-stick axis selection and report
-  traffic have board coverage. A full four-direction stick sweep and hot-plug
-  recovery still need explicit tests.
+- HID enumeration, descriptor parsing, right-stick axis selection, report
+  traffic and the four-direction closed-loop drive have board coverage.
+  Hot-plug recovery still needs an explicit test.
 - BMI088, DDS, MSP, odometry, trajectory planning and advanced kinematics are
   not included.
-- MiracZV has booted on the board and the wireless gamepad HID path is
-  validated. Complete motor/encoder closed-loop validation is still pending.
+- Wireless gamepad input and the four-direction closed-loop drive have passed
+  board validation; sustained loaded operation and thermal limits remain to be
+  characterized.
 
 ## Tests
 

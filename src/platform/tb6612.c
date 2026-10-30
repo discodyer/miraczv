@@ -30,6 +30,7 @@ static const struct miraczv_chassis_config chassis_config = {
 			.dev = DEVICE_DT_GET(DT_NODELABEL(qei0)),
 			.ops = &miraczv_qeiv2_encoder_ops,
 			.counts_per_revolution = DT_PROP(DT_NODELABEL(qei0), counts_per_revolution),
+			.invert = true,
 		},
 		{
 			.dev = DEVICE_DT_GET(DT_NODELABEL(qei1)),

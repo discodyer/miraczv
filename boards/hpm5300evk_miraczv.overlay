@@ -23,7 +23,6 @@
 			left-in2-gpios = <&gpioa 30 GPIO_ACTIVE_HIGH>;
 			right-in1-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
 			right-in2-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
-			right-invert;
 			standby-gpios = <&gpioa 25 GPIO_ACTIVE_HIGH>;
 			pinctrl-0 = <&pa12_gpio_a_12 &pa30_gpio_a_30 &pa25_gpio_a_25
 				     &pb10_gpio_b_10 &pb11_gpio_b_11>;
@@ -40,7 +39,7 @@
 
 &qei0 {
 	status = "okay";
-	pinctrl-0 = <&pa20_qei0_a &pa21_qei0_b>;
+	pinctrl-0 = <&pb12_qei0_a &pb13_qei0_b>;
 	pinctrl-names = "default";
 	mode = "abz";
 	counts-per-revolution = <56000>;
@@ -70,14 +69,14 @@
 	};
 };
 
-&pa20_qei0_a {
+&pb12_qei0_a {
 	group0 {
 		input-enable;
 		bias-pull-up;
 	};
 };
 
-&pa21_qei0_b {
+&pb13_qei0_b {
 	group0 {
 		input-enable;
 		bias-pull-up;

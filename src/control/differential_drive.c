@@ -84,9 +84,14 @@ void miraczv_drive_control_step(int64_t now_ms)
 					     (2.0f * 3.14159265f * drive_config.wheel_radius_m) /
 					     encoder->counts_per_revolution;
 		drive_state.wheel_speed_valid[i] = true;
-		drive_state.wheel_output[i] =
-			miraczv_pid_update(&drive_config.pid[i], drive_state.wheel_setpoint[i],
-					   drive_state.wheel_speed[i], dt_s);
+		if (drive_state.wheel_setpoint[i] == 0.0f) {
+			miraczv_pid_reset(&drive_config.pid[i]);
+			drive_state.wheel_output[i] = 0.0f;
+		} else {
+			drive_state.wheel_output[i] = miraczv_pid_update(
+				&drive_config.pid[i], drive_state.wheel_setpoint[i],
+				drive_state.wheel_speed[i], dt_s);
+		}
 		miraczv_chassis_drive((enum miraczv_wheel)i, drive_state.wheel_output[i]);
 	}
 }

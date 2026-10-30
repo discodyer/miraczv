@@ -61,12 +61,12 @@ config MIRACZV_MAX_WHEEL_MPS
 
 config MIRACZV_MAX_LINEAR_MPS
 	int "Maximum remote-control linear speed in millimeters per second"
-	default 1000
+	default 500
 	range 1 100000
 
 config MIRACZV_MAX_ANGULAR_MRADPS
 	int "Maximum remote-control yaw rate in milliradians per second"
-	default 3142
+	default 6667
 	range 1 100000
 
 config MIRACZV_COMMAND_TIMEOUT_MS
