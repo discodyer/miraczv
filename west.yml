@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+
+manifest:
+  version: "1.0"
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+    - name: hpmicro
+      url-base: https://github.com/hpmicro
+    - name: discodyer
+      url-base: https://github.com/discodyer
+
+  defaults:
+    remote: discodyer
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: 41d10b59730406bbab4ca9f1fbbe9e96aafb4966
+      import: true
+
+    - name: hpm_sdk
+      remote: hpmicro
+      revision: ccc5ec467a047f3ea85cd2fa4565e91db7135a38
+      path: modules/hal/hpm_sdk
+
+    - name: hpm-zephyr
+      revision: 0d23f024d8998ab1e9c83d916cf1c367f4052df0
+      path: modules/hpm-zephyr
+
+  self:
+    path: miraczv

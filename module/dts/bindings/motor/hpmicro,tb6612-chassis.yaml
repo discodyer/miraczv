@@ -1,0 +1,40 @@
+# Copyright (c) 2026 Cody Gu <gujiaqi@iscas.ac.cn>
+# SPDX-License-Identifier: Apache-2.0
+
+description: Differential chassis with two TB6612FNG channels.
+
+compatible: "hpmicro,tb6612-chassis"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  pwms:
+    type: phandle-array
+    required: true
+    description: Left and right PWM outputs, in that order.
+
+  left-in1-gpios:
+    type: phandle-array
+    required: true
+
+  left-in2-gpios:
+    type: phandle-array
+    required: true
+
+  right-in1-gpios:
+    type: phandle-array
+    required: true
+
+  right-in2-gpios:
+    type: phandle-array
+    required: true
+
+  standby-gpios:
+    type: phandle-array
+    required: true
+
+  pinctrl-0:
+    required: true
+
+  pinctrl-names:
+    required: true

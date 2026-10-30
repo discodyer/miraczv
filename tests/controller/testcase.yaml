@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  app.miraczv.controller:
+    platform_allow: native_sim
+    integration_platforms:
+      - native_sim
+    tags: control

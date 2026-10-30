@@ -1,0 +1,132 @@
+/*
+ * Copyright (c) 2026 Cody Gu <gujiaqi@iscas.ac.cn>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+	};
+
+	miraczv {
+		status = "okay";
+
+		chassis: chassis {
+			compatible = "hpmicro,tb6612-chassis";
+			pwms = <&pwm0 2 PWM_USEC(20) PWM_POLARITY_NORMAL>,
+			       <&pwm0 3 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+			left-in1-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
+			left-in2-gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+			right-in1-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+			right-in2-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
+			standby-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
+			pinctrl-0 = <&pa10_gpio_a_10 &pa11_gpio_a_11 &pa12_gpio_a_12
+				     &pb10_gpio_b_10 &pb11_gpio_b_11>;
+			pinctrl-names = "default";
+		};
+	};
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&pa26_pwm0_p_2 &pa27_pwm0_p_3>;
+	pinctrl-names = "default";
+};
+
+&qei0 {
+	status = "okay";
+	pinctrl-0 = <&pa20_qei0_a &pa21_qei0_b>;
+	pinctrl-names = "default";
+	mode = "abz";
+	counts-per-revolution = <14000>;
+	filter-length = <0>;
+};
+
+&qei1 {
+	status = "okay";
+	pinctrl-0 = <&pb04_qei1_a &pb05_qei1_b>;
+	pinctrl-names = "default";
+	mode = "abz";
+	counts-per-revolution = <14000>;
+	filter-length = <0>;
+};
+
+&pb04_qei1_a {
+	group0 {
+		input-enable;
+		bias-pull-up;
+	};
+};
+
+&pb05_qei1_b {
+	group0 {
+		input-enable;
+		bias-pull-up;
+	};
+};
+
+&pa20_qei0_a {
+	group0 {
+		input-enable;
+		bias-pull-up;
+	};
+};
+
+&pa21_qei0_b {
+	group0 {
+		input-enable;
+		bias-pull-up;
+	};
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&pa10_gpio_a_10 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pa11_gpio_a_11 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pa12_gpio_a_12 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pb10_gpio_b_10 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pb11_gpio_b_11 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&gpiob {
+	status = "okay";
+};
+
+&usb0 {
+	status = "okay";
+	pinctrl-0 = <&py00_soc_gpio_y_00 &py01_soc_gpio_y_01 &py02_soc_gpio_y_02
+		     &py00_usb0_id &py01_usb0_oc &py02_usb0_pwr>;
+};
+
+&cpu0 {
+	riscv,isa-extensions = "i", "m", "a", "c", "f", "d", "zicsr", "zifencei";
+};
