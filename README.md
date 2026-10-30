@@ -25,17 +25,22 @@ Target board: HPM5300EVK RevD with HPM5361ICB1.
 |---|---|---|
 | Left motor PWM | PA26 / PWM0.P2 | J7-11 |
 | Right motor PWM | PA27 / PWM0.P3 | J7-12 |
-| Left motor IN1 | PA10 / GPIOA10 | P1-12 |
-| Left motor IN2 | PA11 / GPIOA11 | P1-16 |
+| Left motor IN1 | PA12 / GPIOA12 | P1-11 |
+| Left motor IN2 | PA30 / GPIOA30 | P1-15 |
 | Right motor IN1 | PB10 / GPIOB10 | P1-36 |
 | Right motor IN2 | PB11 / GPIOB11 | P1-40 |
-| Motor standby | PA12 / GPIOA12 | P1-11 |
+| Motor standby | PA25 / GPIOA25 | P1-26 |
 | Left encoder A | PA20 / QEI0.A | J7-1 |
 | Left encoder B | PA21 / QEI0.B | J7-3 |
 | Right encoder A | PB04 / QEI1.A | P1-31 |
 | Right encoder B | PB05 / QEI1.B | P1-32 |
 | USB Host | USB0 | J1 USB_OTG |
 | Console | UART0 | J8 FT2232 |
+
+On the HPM5300EVK, encoder connector J7 shares its A and B nets with P1-12 and
+P1-16. Do not use those P1 pins for motor direction outputs. The right motor
+uses `right-invert` in Devicetree because its installed polarity is opposite
+to the left motor.
 
 TB6612 VM must come from an external motor supply with a common ground. Do not
 connect motor power to an EVK header. The EVK header only carries the 3.3 V

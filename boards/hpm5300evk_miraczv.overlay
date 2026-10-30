@@ -19,12 +19,13 @@
 			compatible = "hpmicro,tb6612-chassis";
 			pwms = <&pwm0 2 PWM_USEC(20) PWM_POLARITY_NORMAL>,
 			       <&pwm0 3 PWM_USEC(20) PWM_POLARITY_NORMAL>;
-			left-in1-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
-			left-in2-gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+			left-in1-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
+			left-in2-gpios = <&gpioa 30 GPIO_ACTIVE_HIGH>;
 			right-in1-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
 			right-in2-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
-			standby-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
-			pinctrl-0 = <&pa10_gpio_a_10 &pa11_gpio_a_11 &pa12_gpio_a_12
+			right-invert;
+			standby-gpios = <&gpioa 25 GPIO_ACTIVE_HIGH>;
+			pinctrl-0 = <&pa12_gpio_a_12 &pa30_gpio_a_30 &pa25_gpio_a_25
 				     &pb10_gpio_b_10 &pb11_gpio_b_11>;
 			pinctrl-names = "default";
 		};
@@ -87,19 +88,19 @@
 	status = "okay";
 };
 
-&pa10_gpio_a_10 {
-	group0 {
-		hpmicro-slew-rate = "fast";
-	};
-};
-
-&pa11_gpio_a_11 {
-	group0 {
-		hpmicro-slew-rate = "fast";
-	};
-};
-
 &pa12_gpio_a_12 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pa30_gpio_a_30 {
+	group0 {
+		hpmicro-slew-rate = "fast";
+	};
+};
+
+&pa25_gpio_a_25 {
 	group0 {
 		hpmicro-slew-rate = "fast";
 	};

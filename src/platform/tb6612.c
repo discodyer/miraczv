@@ -11,27 +11,32 @@
 #include <zephyr/sys/util.h>
 
 static const struct miraczv_chassis_config chassis_config = {
-	.motor[MIRACZV_WHEEL_LEFT] = {
+	.motor = {
+		{
 			.pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), 0),
 			.in1 = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), left_in1_gpios, 0),
 			.in2 = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), left_in2_gpios, 0),
 		},
-	.motor[MIRACZV_WHEEL_RIGHT] = {
+		{
 			.pwm = PWM_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), 1),
 			.in1 = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), right_in1_gpios, 0),
 			.in2 = GPIO_DT_SPEC_GET_BY_IDX(DT_NODELABEL(chassis), right_in2_gpios, 0),
+			.invert = DT_PROP(DT_NODELABEL(chassis), right_invert),
 		},
+	},
 	.standby = GPIO_DT_SPEC_GET(DT_NODELABEL(chassis), standby_gpios),
-	.encoder[MIRACZV_WHEEL_LEFT] = {
+	.encoder = {
+		{
 			.dev = DEVICE_DT_GET(DT_NODELABEL(qei0)),
 			.ops = &miraczv_qeiv2_encoder_ops,
 			.counts_per_revolution = DT_PROP(DT_NODELABEL(qei0), counts_per_revolution),
 		},
-	.encoder[MIRACZV_WHEEL_RIGHT] = {
+		{
 			.dev = DEVICE_DT_GET(DT_NODELABEL(qei1)),
 			.ops = &miraczv_qeiv2_encoder_ops,
 			.counts_per_revolution = DT_PROP(DT_NODELABEL(qei1), counts_per_revolution),
 		},
+	},
 };
 
 PINCTRL_DT_DEFINE(DT_NODELABEL(chassis));
@@ -51,11 +56,10 @@ static int motor_write(const struct miraczv_motor *motor, int32_t permille)
 	bool forward;
 
 	permille = CLAMP(permille, -1000, 1000);
-	if (motor->invert) {
-		permille = -permille;
-	}
-
 	forward = permille >= 0;
+	if (motor->invert) {
+		forward = !forward;
+	}
 	if (permille < 0) {
 		permille = -permille;
 	}

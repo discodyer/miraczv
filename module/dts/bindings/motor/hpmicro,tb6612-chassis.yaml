@@ -29,6 +29,10 @@ properties:
     type: phandle-array
     required: true
 
+  right-invert:
+    type: boolean
+    description: Reverse the right motor direction in software.
+
   standby-gpios:
     type: phandle-array
     required: true

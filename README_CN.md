@@ -24,17 +24,21 @@ MiracZV（Miracle + Zephyr + RISC-V）是面向 HPM5361 的紧凑型差速小车
 |---|---|---|
 | 左电机 PWM | PA26 / PWM0.P2 | J7-11 |
 | 右电机 PWM | PA27 / PWM0.P3 | J7-12 |
-| 左电机 IN1 | PA10 / GPIOA10 | P1-12 |
-| 左电机 IN2 | PA11 / GPIOA11 | P1-16 |
+| 左电机 IN1 | PA12 / GPIOA12 | P1-11 |
+| 左电机 IN2 | PA30 / GPIOA30 | P1-15 |
 | 右电机 IN1 | PB10 / GPIOB10 | P1-36 |
 | 右电机 IN2 | PB11 / GPIOB11 | P1-40 |
-| 电机待机 | PA12 / GPIOA12 | P1-11 |
+| 电机待机 | PA25 / GPIOA25 | P1-26 |
 | 左编码器 A | PA20 / QEI0.A | J7-1 |
 | 左编码器 B | PA21 / QEI0.B | J7-3 |
 | 右编码器 A | PB04 / QEI1.A | P1-31 |
 | 右编码器 B | PB05 / QEI1.B | P1-32 |
 | USB Host | USB0 | J1 USB_OTG |
 | 控制台 | UART0 | J8 FT2232 |
+
+HPM5300EVK 上编码器接口 J7 的 A/B 网络分别与 P1-12、P1-16 相连，不可再将
+这两个排针脚用于电机方向输出。右电机在 Devicetree 中启用 `right-invert`，
+用于补偿其实际安装方向与左电机相反。
 
 TB6612 的 VM 必须由独立电机电源供电，并与开发板共地。不可将电机电源接到
 EVK 排针；排针只承载上表中的 3.3 V 逻辑信号。
