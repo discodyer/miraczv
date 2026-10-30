@@ -11,7 +11,7 @@ on-chip peripherals:
 
 - TB6612FNG dual motor PWM and direction control
 - Generic encoder abstraction with an HPMicro QEIV2 backend
-- USB Host HID input using the report descriptor for X/Y axis discovery
+- USB Host HID input using the report descriptor for right-stick discovery
 - Controller abstraction for future DDS, MSP or autonomous command sources
 - 100 Hz differential-drive kinematics and independent wheel-speed PID loops
 - Hardware single- and double-precision floating point
@@ -41,6 +41,17 @@ TB6612 VM must come from an external motor supply with a common ground. Do not
 connect motor power to an EVK header. The EVK header only carries the 3.3 V
 logic signals listed above.
 
+The default vehicle parameters follow the MiracZ7 configuration:
+
+| Parameter | Default |
+|---|---|
+| Wheel radius | 32 mm |
+| Differential track width | 150 mm |
+| Wheelbase | 300 mm, reserved for future chassis models |
+| Encoder counts per wheel revolution | 56000 |
+| Maximum linear speed | 1000 mm/s |
+| Maximum yaw rate | 3142 mrad/s |
+
 ## Build
 
 The repository manifest pins Zephyr, HPM SDK and `hpm-zephyr`:
@@ -68,14 +79,20 @@ The application does not modify Zephyr, `hpm_sdk` or `hpm-zephyr`.
 ## USB Host input
 
 Connect an OTG-aware adapter to J1 and attach a USB HID gamepad or its wireless
-receiver. MiracZV finds the HID report descriptor, locates the Generic Desktop
-X and Y usages, and uses the descriptor's Report ID, bit offset, field width,
-signedness and logical range. Current mapping:
+receiver. MiracZV finds the HID report descriptor and locates the right-stick
+axes. It prefers `Z` (horizontal) and `RZ` (vertical), and automatically falls
+back to `RX`/`RY` when that pair is not present. Use
+`CONFIG_MIRACZV_HID_RIGHT_STICK_RX_RY=y` to prefer `RX`/`RY` instead. The
+descriptor's Report ID, bit offset, field width, signedness and logical range
+are used. Current mapping:
 
-- X axis: steering
-- Y axis: throttle, inverted by default so pushing the stick forward drives forward
-- X/Y inversion can be changed with `CONFIG_MIRACZV_HID_INVERT_X` and
-  `CONFIG_MIRACZV_HID_INVERT_Y`
+- Right stick horizontal axis: steering
+- Right stick vertical axis: throttle, inverted by default so pushing forward
+  drives forward
+- Right stick horizontal axis: inverted by default so pushing left gives a
+  positive yaw rate and turns left
+- Axis inversion can be changed with `CONFIG_MIRACZV_HID_INVERT_STEERING` and
+  `CONFIG_MIRACZV_HID_INVERT_THROTTLE`
 - Dead zone: `CONFIG_MIRACZV_HID_AXIS_DEADZONE_PERMILLE`
 - Linear limit: `CONFIG_MIRACZV_MAX_LINEAR_MPS`
 - Yaw-rate limit: `CONFIG_MIRACZV_MAX_ANGULAR_MRADPS`
@@ -90,9 +107,11 @@ failure on hardware.
 
 On 2026-10-30, MiracZV enumerated the wireless USB HID receiver, fetched and
 parsed its 123-byte report descriptor, and received continuous 9-byte reports.
-The decoded X/Y values changed with gamepad input while the neutral position
-was 128:128. This validates the host input path through axis decoding; motor and
-encoder closed-loop behavior remain separate hardware tests.
+An earlier X/Y build confirmed decoded axis values changing with gamepad input.
+The right-stick firmware then identified four axes and selected `Z/RZ` as the
+preferred right-stick pair, with neutral values of 128:128. A complete
+forward/reverse/left/right stick sweep remains a separate operator test; motor
+and encoder closed-loop behavior also remain separate hardware tests.
 
 ## Control architecture
 
@@ -138,11 +157,11 @@ provide vehicle-coordinate `linear_mps` and `angular_radps`.
 
 - Motorbus voltage, encoder polarity and physical CPR must be checked on the
   actual vehicle.
-- HID input currently uses X/Y axes. Trigger, hat and button mappings are not
-  implemented yet.
-- HID enumeration, descriptor parsing, X/Y report traffic and continuous input
-  have board coverage. Hot-plug recovery still needs an explicit unplug/replug
-  test.
+- HID input currently uses the right stick. Trigger, hat and button mappings are
+  not implemented yet.
+- HID enumeration, descriptor parsing, right-stick axis selection and report
+  traffic have board coverage. A full four-direction stick sweep and hot-plug
+  recovery still need explicit tests.
 - BMI088, DDS, MSP, odometry, trajectory planning and advanced kinematics are
   not included.
 - MiracZV has booted on the board and the wireless gamepad HID path is

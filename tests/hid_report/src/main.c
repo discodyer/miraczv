@@ -4,10 +4,10 @@
  */
 
 #include <errno.h>
+#include <miraczv/hid_report.h>
 #include <stdint.h>
 #include <zephyr/usb/class/hid.h>
 #include <zephyr/ztest.h>
-#include <miraczv/hid_report.h>
 
 static const uint8_t gamepad_descriptor[] = {
 	HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
@@ -52,6 +52,22 @@ static const uint8_t report_id_descriptor[] = {
 	HID_END_COLLECTION,
 };
 
+static const uint8_t right_stick_descriptor[] = {
+	HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
+	HID_USAGE(HID_USAGE_GEN_DESKTOP_GAMEPAD),
+	HID_COLLECTION(HID_COLLECTION_APPLICATION),
+	HID_REPORT_SIZE(8),
+	HID_REPORT_COUNT(4),
+	HID_LOGICAL_MIN8(0),
+	HID_LOGICAL_MAX8(255),
+	HID_USAGE(MIRACZV_HID_USAGE_DESKTOP_Z),
+	HID_USAGE(MIRACZV_HID_USAGE_DESKTOP_RZ),
+	HID_USAGE(MIRACZV_HID_USAGE_DESKTOP_RX),
+	HID_USAGE(MIRACZV_HID_USAGE_DESKTOP_RY),
+	HID_INPUT(0x02),
+	HID_END_COLLECTION,
+};
+
 static const uint8_t gamepad_8bit_descriptor[] = {
 	HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
 	HID_USAGE(HID_USAGE_GEN_DESKTOP_GAMEPAD),
@@ -74,6 +90,24 @@ static const uint8_t gamepad_8bit_descriptor[] = {
 	HID_END_COLLECTION,
 	HID_END_COLLECTION,
 };
+
+ZTEST(miraczv_hid_report, test_finds_rotational_axes)
+{
+	struct miraczv_hid_report report;
+	const uint8_t input[4] = {0x40, 0xc0, 0x20, 0xe0};
+	int32_t value;
+
+	zassert_ok(miraczv_hid_report_parse(right_stick_descriptor, sizeof(right_stick_descriptor),
+					    &report));
+	zassert_equal(report.axis_count, 4);
+	zassert_equal(miraczv_hid_report_find_axis(&report, MIRACZV_HID_USAGE_DESKTOP_Z), 0);
+	zassert_equal(miraczv_hid_report_find_axis(&report, MIRACZV_HID_USAGE_DESKTOP_RZ), 1);
+	zassert_equal(miraczv_hid_report_find_axis(&report, MIRACZV_HID_USAGE_DESKTOP_RX), 2);
+	zassert_equal(miraczv_hid_report_find_axis(&report, MIRACZV_HID_USAGE_DESKTOP_RY), 3);
+	zassert_equal(miraczv_hid_report_find_axis(&report, MIRACZV_HID_USAGE_DESKTOP_X), -ENOENT);
+	zassert_ok(miraczv_hid_report_axis(&report, 1, input, sizeof(input), &value));
+	zassert_equal(value, 0xc0);
+}
 
 ZTEST(miraczv_hid_report, test_gamepad_8bit_centered_axes)
 {

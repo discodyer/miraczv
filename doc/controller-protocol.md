@@ -20,7 +20,7 @@ for a successful poll. The command is expressed in vehicle coordinates:
 - `linear_mps`: forward velocity
 - `angular_radps`: positive yaw rate
 
-The current HID source fills these fields from a gamepad X/Y axis report.
+The current HID source fills these fields from a gamepad right-stick report.
 Another source such as DDS, MSP or a planner can fill the same structure
 without changing the drive controller. A source should report its acquisition
 timestamp and monotonically increasing sequence number when available.

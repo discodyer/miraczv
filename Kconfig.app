@@ -46,6 +46,14 @@ config MIRACZV_TRACK_WIDTH_MM
 	default 150
 	range 1 5000
 
+config MIRACZV_WHEELBASE_MM
+	int "Vehicle wheelbase in millimeters"
+	default 300
+	range 1 10000
+	help
+	  Reserved for chassis models that need front-to-rear axle spacing.
+	  The current differential drive uses MIRACZV_TRACK_WIDTH_MM instead.
+
 config MIRACZV_MAX_WHEEL_MPS
 	int "Absolute maximum wheel speed in millimeters per second"
 	default 2000
@@ -53,12 +61,12 @@ config MIRACZV_MAX_WHEEL_MPS
 
 config MIRACZV_MAX_LINEAR_MPS
 	int "Maximum remote-control linear speed in millimeters per second"
-	default 800
+	default 1000
 	range 1 100000
 
 config MIRACZV_MAX_ANGULAR_MRADPS
 	int "Maximum remote-control yaw rate in milliradians per second"
-	default 2000
+	default 3142
 	range 1 100000
 
 config MIRACZV_COMMAND_TIMEOUT_MS
@@ -71,13 +79,34 @@ config MIRACZV_HID_AXIS_DEADZONE_PERMILLE
 	default 60
 	range 0 500
 
-config MIRACZV_HID_INVERT_Y
-	bool "Invert the HID Y axis"
-	default y
+choice MIRACZV_HID_RIGHT_STICK_AXES
+	prompt "Preferred HID right-stick axis encoding"
+	default MIRACZV_HID_RIGHT_STICK_Z_RZ
+	help
+	  Select the Generic Desktop axes normally used by the right stick.
+	  MiracZV falls back to the other pair when the preference is absent.
 
-config MIRACZV_HID_INVERT_X
-	bool "Invert the HID X axis"
-	default n
+config MIRACZV_HID_RIGHT_STICK_Z_RZ
+	bool "Z and RZ axes"
+
+config MIRACZV_HID_RIGHT_STICK_RX_RY
+	bool "RX and RY axes"
+
+endchoice
+
+config MIRACZV_HID_INVERT_THROTTLE
+	bool "Invert the right-stick throttle axis"
+	default y
+	help
+	  Most HID gamepads report the vertical axis with its minimum at the
+	  top. Enable this so pushing the right stick forward drives forward.
+
+config MIRACZV_HID_INVERT_STEERING
+	bool "Invert the right-stick steering axis"
+	default y
+	help
+	  Standard HID gamepads report left as the axis minimum. Inverting this
+	  axis maps left stick movement to positive yaw, which turns left.
 
 config MIRACZV_HID_REPORT_TIMEOUT_MS
 	int "HID interrupt transfer timeout in milliseconds"

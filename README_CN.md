@@ -10,7 +10,7 @@ MiracZV（Miracle + Zephyr + RISC-V）是面向 HPM5361 的紧凑型差速小车
 
 - TB6612FNG 双路电机 PWM 与方向控制
 - 通用编码器抽象，以及 HPMicro QEIV2 后端
-- 通过 HID 报告描述符自动识别 X/Y 轴的 USB Host 输入
+- 通过 HID 报告描述符自动识别右摇杆轴的 USB Host 输入
 - 可扩展的控制器抽象，后续可接入 DDS、MSP 或自主控制源
 - 100 Hz 差速运动学与左右轮独立速度 PID
 - 单精度、双精度硬件浮点
@@ -39,6 +39,17 @@ MiracZV（Miracle + Zephyr + RISC-V）是面向 HPM5361 的紧凑型差速小车
 TB6612 的 VM 必须由独立电机电源供电，并与开发板共地。不可将电机电源接到
 EVK 排针；排针只承载上表中的 3.3 V 逻辑信号。
 
+默认车辆参数与 MiracZ7 配置一致：
+
+| 参数 | 默认值 |
+|---|---|
+| 车轮半径 | 32 mm |
+| 差速轮距 | 150 mm |
+| 轴距 | 300 mm，预留供后续底盘模型使用 |
+| 每轮每转编码器计数 | 56000 |
+| 最大线速度 | 1000 mm/s |
+| 最大偏航角速度 | 3142 mrad/s |
+
 ## 构建
 
 仓库清单固定 Zephyr、HPM SDK 和 `hpm-zephyr` 的版本：
@@ -66,13 +77,16 @@ west build -p always -b hpm5300evk/hpm5361 -d build/miraczv \
 ## USB Host 输入
 
 将支持 OTG 的转接头接在 J1，再连接 USB HID 手柄或其无线接收器。MiracZV 会读取
-HID 报告描述符，定位 Generic Desktop X/Y usage，并使用其中的 Report ID、位偏移、
-字段宽度、符号属性及逻辑范围。当前映射如下：
+HID 报告描述符并定位右摇杆轴。默认优先使用 `Z`（水平）和 `RZ`（垂直）；如果设备
+没有这组轴，会自动回退到 `RX`/`RY`。可设置
+`CONFIG_MIRACZV_HID_RIGHT_STICK_RX_RY=y` 优先使用 `RX`/`RY`。解析时会使用描述符
+中的 Report ID、位偏移、字段宽度、符号属性及逻辑范围。当前映射如下：
 
-- X 轴：转向
-- Y 轴：油门，默认反向，使摇杆向前推时车辆前进
-- 可用 `CONFIG_MIRACZV_HID_INVERT_X` 和
-  `CONFIG_MIRACZV_HID_INVERT_Y` 调整轴方向
+- 右摇杆水平轴：转向
+- 右摇杆垂直轴：油门，默认反向，使摇杆向前推时车辆前进
+- 右摇杆水平轴：默认反向，使摇杆向左推时产生正角速度并左转
+- 可用 `CONFIG_MIRACZV_HID_INVERT_STEERING` 和
+  `CONFIG_MIRACZV_HID_INVERT_THROTTLE` 调整轴方向
 - 死区：`CONFIG_MIRACZV_HID_AXIS_DEADZONE_PERMILLE`
 - 线速度限制：`CONFIG_MIRACZV_MAX_LINEAR_MPS`
 - 角速度限制：`CONFIG_MIRACZV_MAX_ANGULAR_MRADPS`
@@ -84,8 +98,10 @@ HPM5361 上于描述符传输后出现过堆损坏；改用手柄私有固定池
 验证中消失。
 
 2026-10-30 的实机验证中，MiracZV 成功枚举无线 USB HID 接收器，读取并解析其
-123 字节报告描述符，并持续接收到 9 字节报告。X/Y 值随手柄操作变化，回中值为
-128:128。这验证了 USB Host 输入链路和轴解码；电机与编码器闭环仍需分别做实机测试。
+123 字节报告描述符，并持续接收到 9 字节报告。较早的 X/Y 固件已确认轴值会随手柄
+操作变化。右摇杆固件随后识别出 4 个轴并选择 `Z/RZ` 作为优先右摇杆轴，静止值为
+128:128。完整的前进、后退、左转、右转摇杆扫动仍待操作测试；电机与编码器闭环也
+仍需分别做实机测试。
 
 ## 控制架构
 
@@ -125,9 +141,9 @@ generic encoder API (QEIV2 backend)
 ## 当前限制
 
 - 实际车辆上必须确认电机电源电压、编码器极性和机械 CPR。
-- HID 当前只使用 X/Y 轴，尚未实现扳机、帽键和按键映射。
-- HID 枚举、描述符解析、X/Y 报告和持续输入已完成实机验证；热插拔恢复仍需
-  单独的拔插测试。
+- HID 当前只使用右摇杆，尚未实现扳机、帽键和按键映射。
+- HID 枚举、描述符解析、右摇杆轴选择和报告流已有实机覆盖；完整四方向摇杆扫动
+  与热插拔恢复仍需专项测试。
 - 暂不包含 BMI088、DDS、MSP、里程计、轨迹规划和高级运动学。
 - MiracZV 已在开发板启动且无线手柄 HID 路径已通过实机验证；完整的电机/编码器
   闭环验证尚未完成。

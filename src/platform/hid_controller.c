@@ -27,8 +27,6 @@
 #define HID_REPORT_DESC_MAX      1024U
 #define MIRACZV_HID_BUFFER_BYTES 512U
 #define MIRACZV_HID_BUFFER_COUNT 2U
-#define HID_AXIS_X               0x30U
-#define HID_AXIS_Y               0x31U
 
 LOG_MODULE_REGISTER(miraczv_hid, CONFIG_MIRACZV_HID_LOG_LEVEL);
 
@@ -53,6 +51,8 @@ struct hid_input_state {
 	int report_status;
 	uint32_t sequence;
 	int64_t last_report_ms;
+	uint8_t steer_axis;
+	uint8_t throttle_axis;
 	struct miraczv_hid_report report_map;
 };
 
@@ -75,17 +75,6 @@ static struct net_buf *hid_buffer_alloc(size_t length)
 		net_buf_reset(buf);
 	}
 	return buf;
-}
-
-static bool hid_report_has_axis(uint32_t usage)
-{
-	for (uint8_t i = 0U; i < hid.report_map.axis_count; ++i) {
-		if (hid.report_map.usage[i] == usage) {
-			return true;
-		}
-	}
-
-	return false;
 }
 
 static void hid_release_xfer(void)
@@ -242,6 +231,42 @@ static struct usbh_class_api hid_api = {
 
 USBH_DEFINE_CLASS(miraczv_hid, &hid_api, NULL, NULL);
 
+BUILD_ASSERT(IS_ENABLED(CONFIG_MIRACZV_HID_RIGHT_STICK_Z_RZ) !=
+		     IS_ENABLED(CONFIG_MIRACZV_HID_RIGHT_STICK_RX_RY),
+	     "Select exactly one preferred right-stick axis encoding");
+
+static int hid_select_right_stick(void)
+{
+	const uint32_t primary_steer = IS_ENABLED(CONFIG_MIRACZV_HID_RIGHT_STICK_Z_RZ)
+					       ? MIRACZV_HID_USAGE_DESKTOP_Z
+					       : MIRACZV_HID_USAGE_DESKTOP_RX;
+	const uint32_t primary_throttle = IS_ENABLED(CONFIG_MIRACZV_HID_RIGHT_STICK_Z_RZ)
+						  ? MIRACZV_HID_USAGE_DESKTOP_RZ
+						  : MIRACZV_HID_USAGE_DESKTOP_RY;
+	const uint32_t fallback_steer = primary_steer == MIRACZV_HID_USAGE_DESKTOP_Z
+						? MIRACZV_HID_USAGE_DESKTOP_RX
+						: MIRACZV_HID_USAGE_DESKTOP_Z;
+	const uint32_t fallback_throttle = primary_throttle == MIRACZV_HID_USAGE_DESKTOP_RZ
+						   ? MIRACZV_HID_USAGE_DESKTOP_RY
+						   : MIRACZV_HID_USAGE_DESKTOP_RZ;
+	int steer_axis = miraczv_hid_report_find_axis(&hid.report_map, primary_steer);
+	int throttle_axis = miraczv_hid_report_find_axis(&hid.report_map, primary_throttle);
+
+	if ((steer_axis < 0) || (throttle_axis < 0)) {
+		steer_axis = miraczv_hid_report_find_axis(&hid.report_map, fallback_steer);
+		throttle_axis = miraczv_hid_report_find_axis(&hid.report_map, fallback_throttle);
+	}
+
+	if ((steer_axis < 0) || (throttle_axis < 0)) {
+		LOG_ERR("HID gamepad does not expose a complete right-stick axis pair");
+		return -ENOTSUP;
+	}
+
+	hid.steer_axis = steer_axis;
+	hid.throttle_axis = throttle_axis;
+	return 0;
+}
+
 static int hid_load_report_descriptor(void)
 {
 	uint16_t length = MIN(hid.report_desc_len, HID_REPORT_DESC_MAX);
@@ -266,24 +291,17 @@ static int hid_load_report_descriptor(void)
 	if (ret == 0) {
 		LOG_INF("HID report descriptor: %u bytes, %u axes", buf->len,
 			hid.report_map.axis_count);
-		if (!hid_report_has_axis(HID_AXIS_X) || !hid_report_has_axis(HID_AXIS_Y)) {
-			LOG_ERR("HID gamepad does not expose X/Y axes");
+		ret = hid_select_right_stick();
+		if (ret == 0) {
+			LOG_INF("Right stick: steering=%#x throttle=%#x",
+				hid.report_map.usage[hid.steer_axis],
+				hid.report_map.usage[hid.throttle_axis]);
+		} else {
 			memset(&hid.report_map, 0, sizeof(hid.report_map));
-			ret = -ENOTSUP;
 		}
 	}
 	net_buf_unref(buf);
 	return ret;
-}
-
-static int hid_axis_index(uint32_t usage)
-{
-	for (uint8_t i = 0U; i < hid.report_map.axis_count; ++i) {
-		if (hid.report_map.usage[i] == usage) {
-			return i;
-		}
-	}
-	return -ENOENT;
 }
 
 static float normalize_axis(uint8_t index, int32_t value)
@@ -407,27 +425,25 @@ static int hid_poll(struct miraczv_command *command)
 	if (hid.report_status != 0) {
 		ret = -EIO;
 	} else {
-		int32_t x_raw;
-		int32_t y_raw;
-		int x_axis = hid_axis_index(HID_AXIS_X);
-		int y_axis = hid_axis_index(HID_AXIS_Y);
+		int32_t steer_raw;
+		int32_t throttle_raw;
 		float throttle;
 		float steer;
 
-		if ((x_axis < 0) || (y_axis < 0) ||
-		    miraczv_hid_report_axis(&hid.report_map, x_axis, hid.report, hid.report_len,
-					    &x_raw) != 0 ||
-		    miraczv_hid_report_axis(&hid.report_map, y_axis, hid.report, hid.report_len,
-					    &y_raw) != 0) {
+		if (miraczv_hid_report_axis(&hid.report_map, hid.steer_axis, hid.report,
+					    hid.report_len, &steer_raw) != 0 ||
+		    miraczv_hid_report_axis(&hid.report_map, hid.throttle_axis, hid.report,
+					    hid.report_len, &throttle_raw) != 0) {
 			ret = -EBADMSG;
 		} else {
-			LOG_DBG("HID input: len=%u x=%d y=%d", hid.report_len, x_raw, y_raw);
-			steer = normalize_axis(x_axis, x_raw);
-			throttle = normalize_axis(y_axis, y_raw);
-			if (IS_ENABLED(CONFIG_MIRACZV_HID_INVERT_X)) {
+			LOG_DBG("HID right stick: len=%u steer=%d throttle=%d", hid.report_len,
+				steer_raw, throttle_raw);
+			steer = normalize_axis(hid.steer_axis, steer_raw);
+			throttle = normalize_axis(hid.throttle_axis, throttle_raw);
+			if (IS_ENABLED(CONFIG_MIRACZV_HID_INVERT_STEERING)) {
 				steer = -steer;
 			}
-			if (IS_ENABLED(CONFIG_MIRACZV_HID_INVERT_Y)) {
+			if (IS_ENABLED(CONFIG_MIRACZV_HID_INVERT_THROTTLE)) {
 				throttle = -throttle;
 			}
 			command->linear_mps = throttle * (CONFIG_MIRACZV_MAX_LINEAR_MPS / 1000.0f);

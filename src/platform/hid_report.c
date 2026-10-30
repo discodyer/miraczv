@@ -12,12 +12,6 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/usb/class/hid.h>
 
-#define HID_USAGE_PAGE_DESKTOP 0x01U
-#define HID_USAGE_DESKTOP_X    0x30U
-#define HID_USAGE_DESKTOP_Y    0x31U
-#define HID_USAGE_DESKTOP_Z    0x32U
-#define HID_USAGE_DESKTOP_RX   0x33U
-
 struct hid_global_state {
 	uint32_t usage_page;
 	uint32_t report_size;
@@ -61,9 +55,8 @@ static int64_t item_signed(const uint8_t *data, size_t size)
 
 static bool is_axis_usage(uint32_t usage_page, uint32_t usage)
 {
-	return (usage_page == HID_USAGE_PAGE_DESKTOP) &&
-	       ((usage == HID_USAGE_DESKTOP_X) || (usage == HID_USAGE_DESKTOP_Y) ||
-		(usage == HID_USAGE_DESKTOP_Z) || (usage == HID_USAGE_DESKTOP_RX));
+	return (usage_page == HID_USAGE_GEN_DESKTOP) && (usage >= MIRACZV_HID_USAGE_DESKTOP_X) &&
+	       (usage <= MIRACZV_HID_USAGE_DESKTOP_WHEEL);
 }
 
 static void add_axis(struct miraczv_hid_report *report, uint16_t bit_offset, uint8_t bits,
@@ -211,6 +204,21 @@ int miraczv_hid_report_parse(const uint8_t *descriptor, size_t length,
 	report->axis_count = axis_count;
 	report->parsed = axis_count > 0U;
 	return report->parsed ? 0 : -ENOENT;
+}
+
+int miraczv_hid_report_find_axis(const struct miraczv_hid_report *report, uint32_t usage)
+{
+	if ((report == NULL) || !report->parsed) {
+		return -EINVAL;
+	}
+
+	for (uint8_t i = 0U; i < report->axis_count; ++i) {
+		if (report->usage[i] == usage) {
+			return i;
+		}
+	}
+
+	return -ENOENT;
 }
 
 int miraczv_hid_report_axis(const struct miraczv_hid_report *report, uint8_t index,
