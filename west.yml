@@ -26,7 +26,7 @@ manifest:
       path: modules/hal/hpm_sdk
 
     - name: hpm-zephyr
-      revision: 700aaead8c5b4f60f807ffbf574a9e70a53b23e7
+      revision: 10ea4c3f7fa7d6f69be9a9d86c77a51330eb7ef8
       path: modules/hpm-zephyr
 
   self:
