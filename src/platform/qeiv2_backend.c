@@ -15,17 +15,7 @@
 
 #define QEIV2_SPEED_WINDOW_US     20000U
 #define QEIV2_SPEED_WINDOW_PULSES 64U
-#define QEIV2_SPEED_WINDOW_MS     (QEIV2_SPEED_WINDOW_US / 1000U)
 #define QEIV2_DEFAULT_CLOCK_HZ    24000000U
-
-struct qeiv2_encoder_state {
-	int64_t previous_count;
-	int64_t previous_sample_ms;
-	int32_t counts_per_second_milli;
-	int32_t rpm_milli;
-	bool initialized;
-	bool valid;
-};
 
 struct qeiv2_encoder_config {
 	const struct device *dev;
@@ -33,8 +23,6 @@ struct qeiv2_encoder_config {
 	const struct device *clock_dev;
 	clock_control_subsys_t clock_subsys;
 };
-
-static struct qeiv2_encoder_state encoder_state[2];
 
 static const struct qeiv2_encoder_config encoder_config[] = {
 	{
@@ -94,46 +82,12 @@ static int miraczv_qeiv2_encoder_init(const struct device *dev)
 		return ret;
 	}
 
-	encoder_state[index] = (struct qeiv2_encoder_state){
-		.previous_sample_ms = k_uptime_get(),
-	};
 	return 0;
-}
-
-static void software_speed_update(size_t index, const struct qeiv2_encoder_config *config,
-				  struct miraczv_encoder_data *out)
-{
-	struct qeiv2_encoder_state *state = &encoder_state[index];
-	int64_t total_count =
-		((int64_t)out->revolutions * config->counts_per_revolution) + out->count;
-	int64_t elapsed_ms = out->timestamp_ms - state->previous_sample_ms;
-
-	if (!state->initialized) {
-		state->previous_count = total_count;
-		state->previous_sample_ms = out->timestamp_ms;
-		state->initialized = true;
-		return;
-	}
-
-	if (elapsed_ms >= QEIV2_SPEED_WINDOW_MS) {
-		state->counts_per_second_milli =
-			(int32_t)(((total_count - state->previous_count) * 1000000LL) / elapsed_ms);
-		state->rpm_milli = (int32_t)(((int64_t)state->counts_per_second_milli * 60) /
-					     config->counts_per_revolution);
-		state->previous_count = total_count;
-		state->previous_sample_ms = out->timestamp_ms;
-		state->valid = true;
-	}
-
-	out->counts_per_second_milli = state->counts_per_second_milli;
-	out->rpm_milli = state->rpm_milli;
-	out->speed_valid = state->valid;
 }
 
 int miraczv_qeiv2_encoder_fetch(const struct device *dev, struct miraczv_encoder_data *out)
 {
 	const struct device *sensor = dev;
-	struct hpm_qeiv2_speed_snapshot snapshot;
 	struct sensor_value value;
 	int index = get_encoder_index(sensor);
 	const struct qeiv2_encoder_config *config;
@@ -168,37 +122,19 @@ int miraczv_qeiv2_encoder_fetch(const struct device *dev, struct miraczv_encoder
 	}
 	out->angle_micro_degrees = sensor_value_to_micro(&value);
 
-	out->speed_valid = false;
-	out->rpm_milli = 0;
-	out->counts_per_second_milli = 0;
 	out->timestamp_ms = k_uptime_get();
-	software_speed_update(index, config, out);
-	if (hpm_qeiv2_get_speed_snapshot(sensor, 0U, &snapshot) == 0 &&
-	    snapshot.duration_based_cycles >= speed_window_cycles(config)) {
-		int speed_ret = hpm_qeiv2_speed_to_rpm(sensor, 0U, HPM_QEIV2_SPEED_SOURCE_DURATION,
-						       &snapshot, &value);
-
-		if (speed_ret == 0) {
-			out->rpm_milli = sensor_value_to_milli(&value);
-			out->counts_per_second_milli = (int32_t)(((int64_t)out->rpm_milli *
-								  config->counts_per_revolution) /
-								 60);
-			out->speed_valid = true;
-		} else if (snapshot.duration_based_pulses == 0U) {
-			out->rpm_milli = 0;
-			out->counts_per_second_milli = 0;
-			out->speed_valid = true;
-		} else if (snapshot.pulse_based_cycles > 0U &&
-			   hpm_qeiv2_speed_to_rpm(sensor, 0U, HPM_QEIV2_SPEED_SOURCE_PULSE,
-						  &snapshot, &value) == 0) {
-			out->rpm_milli = sensor_value_to_milli(&value);
-			out->counts_per_second_milli = (int32_t)(((int64_t)out->rpm_milli *
-								  config->counts_per_revolution) /
-								 60);
-			out->speed_valid = true;
-		}
+	ret = hpm_qeiv2_sample_speed(sensor, 0U, &value);
+	if (ret != 0) {
+		out->rpm_milli = 0;
+		out->counts_per_second_milli = 0;
+		out->speed_valid = false;
+		return ret;
 	}
 
+	out->rpm_milli = sensor_value_to_milli(&value);
+	out->counts_per_second_milli =
+		(int32_t)(((int64_t)out->rpm_milli * config->counts_per_revolution) / 60);
+	out->speed_valid = true;
 	return 0;
 }
 

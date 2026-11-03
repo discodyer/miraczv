@@ -124,10 +124,10 @@ differential_drive (v, omega -> left/right wheel setpoints)
 generic encoder API (QEIV2 backend)
 ```
 
-编码器 API 同时提供位置和两种机械速度单位。QEIV2 后端基于硬件相位计数器生成
-固定 20 ms 的计数差分测速，并使用 Devicetree 中的 `counts-per-revolution`。该路径
-可在静止时给出有效的零速度，使闭环能够起步；硬件持续时间或脉冲快照完成时优先
-采用硬件结果。测速窗口无效时则复位对应 PID，并让该轮滑行。
+编码器 API 同时提供位置和两种机械速度单位。周期测速由 QEIV2 驱动基于硬件相位
+计数器在配置的测速窗口内完成，并使用 Devicetree 中的 `counts-per-revolution`。
+完整窗口内无边沿时会给出有效的零速度，使闭环能够从静止起步；测速无效时则复位
+对应 PID，并让该轮滑行。
 
 控制器抽象后续可接入 DDS、MSP、路径规划器或自主控制路径，而无需修改底盘控制
 环。新控制源只需提供车辆坐标系下的 `linear_mps` 和 `angular_radps`。

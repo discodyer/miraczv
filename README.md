@@ -137,11 +137,11 @@ generic encoder API (QEIV2 backend)
 ```
 
 The encoder API reports position and both mechanical speed units. The QEIV2
-backend derives a fixed 20 ms count-delta measurement from the hardware phase
-counter and uses the devicetree `counts-per-revolution` value. This provides a
-valid zero-speed sample at standstill so the closed loop can start; a completed
-hardware duration or pulse snapshot is preferred when available. Invalid
-windows reset the corresponding PID and command that wheel to coast.
+driver provides periodic phase-count speed sampling over the configured speed
+window and uses the devicetree `counts-per-revolution` value. A completed window
+with no edges is a valid zero-speed sample, so the closed loop can start from
+standstill. Invalid samples reset the corresponding PID and command that wheel
+to coast.
 
 The controller abstraction can later accept DDS, MSP, a planner or an
 autonomous path without changing the chassis loop. Another source only needs to
